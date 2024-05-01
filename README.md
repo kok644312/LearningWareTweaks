@@ -1,7 +1,8 @@
-# LearningWareTweak
+# LearningWareTweaks
 Tweak for Learning Ware
 
 # Feature
+* Enable simultaneous lesson
 * Enable playback rate
 * Enable skip
 
