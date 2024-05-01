@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.1.0
+// @version      1.2.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -12,6 +12,12 @@
 
 (function() {
     'use strict';
+
+    /* Login Tweaks */
+    if(location.pathname == "/login/face-verification") {
+        location.pathname = "/login/after-face-process";
+        return;
+    }
 
     /* Lesson Tweaks */
     new MutationObserver((_, observer) => {
