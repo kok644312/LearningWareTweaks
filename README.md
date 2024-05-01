@@ -1,5 +1,5 @@
 # LearningWareTweaks
-Tweak for Learning Ware
+Tweaks for Learning Ware
 
 # Feature
 * Enable simultaneous lesson
