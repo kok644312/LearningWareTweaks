@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.3.0
+// @version      1.4.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -37,7 +37,7 @@
 
     /* Player Tweaks */
     new MutationObserver((_, observer) => {
-        if(location.pathname != "/lesson/pmovie") {
+        if(location.pathname != "/lesson/pmovie" && location.pathname != "/data/lesson/lessondata/frame.html") {
             observer.disconnect();
             return;
         }
@@ -53,7 +53,7 @@
     }).observe(document, {childList: true, subtree: true});
 
     new MutationObserver((_, observer) => {
-        if(location.pathname != "/lesson/pmovie") {
+        if(location.pathname != "/lesson/pmovie" && location.pathname != "/data/lesson/lessondata/frame.html") {
             observer.disconnect();
             return;
         }
@@ -75,4 +75,44 @@
         observer.disconnect();
     }).observe(document, {childList: true, subtree: true});
 
+    /* Nav Tweaks */
+    new MutationObserver((_, observer) => {
+        if(location.pathname != "/lesson/navigation") {
+            observer.disconnect();
+            return;
+        }
+
+        if(window.proseeds == undefined || window.proseeds.lesson == undefined || window.proseeds.lesson.GetLearningStatus == undefined) return;
+
+        window.proseeds.lesson.GetLearningStatus((_1, isCompleted) => {
+            let btnContainerElem = document.querySelector(".rbox");
+            let endBtnElem = document.getElementById("end");
+
+            let completeBtnElem = document.createElement("button");
+            let completeBtnIconElem = document.createElement("span");
+
+            completeBtnElem.id = "complete";
+            if(isCompleted == 1) {
+                completeBtnElem.disabled = true;
+            } else {
+                completeBtnElem.classList.add("touchable");
+            }
+            completeBtnElem.addEventListener("click", () => {
+                window.proseeds.lesson.SetComplete(() => {
+                    window.location.reload();
+                });
+            });
+
+            completeBtnIconElem.classList.add("glyphicon");
+            completeBtnIconElem.classList.add("glyphicon-check");
+
+            completeBtnElem.append(completeBtnIconElem);
+            completeBtnElem.append(document.createElement("br"));
+            completeBtnElem.append(document.createTextNode("レッスンを完了"));
+
+            btnContainerElem.insertBefore(completeBtnElem, endBtnElem);
+        });
+
+        observer.disconnect();
+    }).observe(document, {childList: true, subtree: true});
 })();
