@@ -7,6 +7,7 @@ Tweaks for Learning Ware
 * Enable playback rate
 * Enable skip
 * Add lesson complete button
+* Add outdated lesson complete feature
 
 # Installation
 1. Install [Tampermonkey](https://www.tampermonkey.net/)
