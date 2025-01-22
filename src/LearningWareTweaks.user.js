@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.4.0
+// @version      1.5.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -13,6 +13,10 @@
 (function() {
     'use strict';
 
+    const getParam = (key) => {
+        return new URL(decodeURIComponent(document.location.href)).searchParams.get(key);
+    };
+
     /* Login Tweaks */
     if(location.pathname == "/login/face-verification") {
         location.pathname = "/login/after-face-process";
@@ -20,6 +24,34 @@
     }
 
     /* Lesson Tweaks */
+    document.addEventListener("DOMContentLoaded", () => {
+        if(location.pathname != "/lesson/detail") {
+            return;
+        }
+
+        let styleElem = document.createElement("style");
+        styleElem.innerHTML = `
+        .outdated {
+          filter: hue-rotate(90deg);
+        }
+        `;
+
+        document.body.append(styleElem);
+
+        for(let lessonElem of document.querySelectorAll(".nolink")) {
+            lessonElem.classList.remove("nolink");
+            lessonElem.classList.add("outdated");
+
+            lessonElem.addEventListener("click", function() {
+                let unitId = this.id.split("-")[1];
+
+                fetch(`/api/lesson/set-unit-complete?UserLearningLessonId=${getParam("id")}&UnitId=${unitId}`).then(data => {
+                    location.reload();
+                });
+            });
+        }
+    });
+
     new MutationObserver((_, observer) => {
         if(location.pathname != "/lesson/detail") {
             observer.disconnect();
