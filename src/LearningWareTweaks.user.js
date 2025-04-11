@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.5.0
+// @version      1.6.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -18,10 +18,12 @@
     };
 
     /* Login Tweaks */
+    /*
     if(location.pathname == "/login/face-verification") {
         location.pathname = "/login/after-face-process";
         return;
     }
+    */
 
     /* Lesson Tweaks */
     document.addEventListener("DOMContentLoaded", () => {
@@ -129,9 +131,32 @@
             } else {
                 completeBtnElem.classList.add("touchable");
             }
+
             completeBtnElem.addEventListener("click", () => {
-                window.proseeds.lesson.SetComplete(() => {
-                    window.location.reload();
+                const params = new URL(window.location).searchParams;
+
+                const processStr = (str) => {
+                    const strLen = str.length;
+                    const chr = String.fromCharCode(...crypto.getRandomValues(new Uint8Array(0x4)));
+                    const strb64 = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(strLen)))).substring(0x0, strLen).split('');
+                    const nStr = str.split('').map((chr, chrIndex) => strb64[chrIndex] + chr).join('');
+                    return btoa(nStr + '|' + chr);
+                };
+
+                $.post({
+                    'url': "/api/lesson/complete-pmovie",
+                    'type': "POST",
+                    'headers': {
+                        'gftwkiw': processStr(params.get("UserLearningLessonId")),
+                        'htsgrfg': processStr(params.get("UnitId")),
+                    },
+                    'success': function (res) {
+                        if (res.result === "success") window.location.reload();
+                        else alert("レッスン記録を保存できませんでした");
+                    },
+                    'error': function () {
+                        alert("レッスン記録を保存できませんでした");
+                    },
                 });
             });
 
