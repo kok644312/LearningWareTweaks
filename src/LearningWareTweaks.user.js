@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.6.0
+// @version      1.7.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -18,12 +18,100 @@
     };
 
     /* Login Tweaks */
-    /*
     if(location.pathname == "/login/face-verification") {
-        location.pathname = "/login/after-face-process";
-        return;
+        document.addEventListener("DOMContentLoaded", () => {
+            const overlay = document.getElementById('overlay');
+            const overlayCC = overlay.getContext('2d');
+            const video = document.getElementById('video');
+
+            const verifyFace = imageDataUrl => {
+                $.ajax({
+                    url: '/face-recognition/verify-face',
+                    type: 'POST',
+                    data : {'image': imageDataUrl, 'displayType': '1'},
+                    async: false,
+                }).success(function(data) {
+                    if (data.confirm == true) {
+                        localStorage.setItem("imageDataUrl", imageDataUrl);
+
+                        $.notify({
+                            icon: 'glyphicon glyphicon-ok',
+                            message: polyglot.t('success.verifyFace'),
+                        }, {
+                            type: 'success',
+                            placement : {
+                            from: 'top',
+                            align: 'center',
+                        },
+                            delay: 3000
+                        });
+
+                        let stream = video.srcObject;
+                        video.srcObject = null;
+                        stream?.getTracks().forEach(function(track) {
+                            track.stop();
+                        });
+
+                        window.location.href = '/login/after-face-process';
+                    } else {
+                        $('#verify-face').prop('disabled', false);
+                        $('#verify-face').html(polyglot.t('message.verifyButtonMessage'));
+                        $.notify({
+                            icon: 'glyphicon glyphicon-exclamation-sign',
+                            message: polyglot.t('error.' + data.code),
+                        }, {
+                            type: 'danger',
+                            placement : {
+                                from: 'top',
+                                align: 'center',
+                            },
+                            delay: 3000
+                        });
+                    }
+                }).error(function(error) {
+                    $.notify({
+                        icon: 'glyphicon glyphicon-exclamation-sign',
+                        message: polyglot.t('error.VerifyFaceError'),
+                    }, {
+                        type: 'danger',
+                        placement : {
+                            from: 'top',
+                            align: 'center',
+                        },
+                        delay: 3000
+                    });
+                    $('#verify-face').prop('disabled', false);
+                });
+            };
+
+            if (localStorage.getItem("imageDataUrl") !== null) {
+                setTimeout(() => {
+                    verifyFace(localStorage.getItem("imageDataUrl"));
+                }, 1000);
+            }
+
+            document.getElementById("verify-face").addEventListener("click", event => {
+                event.preventDefault();
+
+                const takeFrame = () => {
+                    if (webrtcDetectedType === 'plugin') {
+                        let base64 = video.getFrame();
+                        return 'data:image/jpeg;base64,' + base64;
+                    } else {
+                        let width = video.videoWidth, height = video.videoHeight;
+                        overlay.width = width;
+                        overlay.height = height;
+                        overlayCC.drawImage(video, 0, 0, width, height, 0, 0, width, height);
+                        return overlay.toDataURL('image/jpeg');
+                    }
+                }
+
+                let imageDataUrl = takeFrame();
+
+                verifyFace(imageDataUrl);
+            });
+        });
     }
-    */
 
     /* Lesson Tweaks */
     document.addEventListener("DOMContentLoaded", () => {
