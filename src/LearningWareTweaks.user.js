@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.7.0
+// @version      1.8.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -114,6 +114,17 @@
     }
 
     /* Lesson Tweaks */
+    const originalAddEventListener = EventTarget.prototype.addEventListener;
+
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+        if (type === 'blur') {
+            console.log('blurイベントをブロックしました');
+            return;
+        }
+
+        return originalAddEventListener.call(this, type, listener, options);
+    };
+
     document.addEventListener("DOMContentLoaded", () => {
         if(location.pathname != "/lesson/detail") {
             return;
