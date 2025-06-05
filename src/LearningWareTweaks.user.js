@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.8.0
+// @version      1.9.0
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=www.pro-seeds.com
 // @run-at       document-start
 // @grant        none
+// @require      https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js
 // ==/UserScript==
 
 (function() {
@@ -17,99 +18,70 @@
         return new URL(decodeURIComponent(document.location.href)).searchParams.get(key);
     };
 
-    /* Login Tweaks */
-    if(location.pathname == "/login/face-verification") {
-        document.addEventListener("DOMContentLoaded", () => {
-            const overlay = document.getElementById('overlay');
-            const overlayCC = overlay.getContext('2d');
-            const video = document.getElementById('video');
+    /* Face verification Tweaks */
+    const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
 
-            const verifyFace = imageDataUrl => {
-                $.ajax({
-                    url: '/face-recognition/verify-face',
-                    type: 'POST',
-                    data : {'image': imageDataUrl, 'displayType': '1'},
-                    async: false,
-                }).success(function(data) {
-                    if (data.confirm == true) {
-                        localStorage.setItem("imageDataUrl", imageDataUrl);
+    navigator.mediaDevices.getUserMedia = function(constraints) {
+        if (constraints && constraints.video && localStorage.getItem("imageDataUrl") !== null) {
+            return new Promise((resolve, reject) => {
+                const imgElem = new Image();
 
-                        $.notify({
-                            icon: 'glyphicon glyphicon-ok',
-                            message: polyglot.t('success.verifyFace'),
-                        }, {
-                            type: 'success',
-                            placement : {
-                            from: 'top',
-                            align: 'center',
-                        },
-                            delay: 3000
-                        });
+                imgElem.addEventListener("load", () => {
+                    const canvasElem = document.createElement("canvas");
+                    canvasElem.width = imgElem.width;
+                    canvasElem.height = imgElem.height;
 
-                        let stream = video.srcObject;
-                        video.srcObject = null;
-                        stream?.getTracks().forEach(function(track) {
-                            track.stop();
-                        });
+                    const canvasCtx = canvasElem.getContext("2d");
+                    canvasCtx.drawImage(imgElem, 0, 0, imgElem.width, imgElem.height);
 
-                        window.location.href = '/login/after-face-process';
-                    } else {
-                        $('#verify-face').prop('disabled', false);
-                        $('#verify-face').html(polyglot.t('message.verifyButtonMessage'));
-                        $.notify({
-                            icon: 'glyphicon glyphicon-exclamation-sign',
-                            message: polyglot.t('error.' + data.code),
-                        }, {
-                            type: 'danger',
-                            placement : {
-                                from: 'top',
-                                align: 'center',
-                            },
-                            delay: 3000
-                        });
-                    }
-                }).error(function(error) {
-                    $.notify({
-                        icon: 'glyphicon glyphicon-exclamation-sign',
-                        message: polyglot.t('error.VerifyFaceError'),
-                    }, {
-                        type: 'danger',
-                        placement : {
-                            from: 'top',
-                            align: 'center',
-                        },
-                        delay: 3000
-                    });
-                    $('#verify-face').prop('disabled', false);
+                    resolve(canvasElem.captureStream(30));
                 });
-            };
 
-            if (localStorage.getItem("imageDataUrl") !== null) {
-                setTimeout(() => {
-                    verifyFace(localStorage.getItem("imageDataUrl"));
-                }, 1000);
-            }
+                imgElem.src = localStorage.getItem("imageDataUrl");
+            });
+        } else {
+            return originalGetUserMedia.call(navigator.mediaDevices, constraints);
+        }
+    };
 
-            document.getElementById("verify-face").addEventListener("click", event => {
-                event.preventDefault();
+    if (location.pathname == "/lesson/face-verification" || location.pathname == "/login/face-verification") {
+        document.addEventListener("DOMContentLoaded", () => {
+            const chooseImageBtn = document.createElement("button");
+            const chooseImageElem = document.createElement("input");
 
-                const takeFrame = () => {
-                    if (webrtcDetectedType === 'plugin') {
-                        let base64 = video.getFrame();
-                        return 'data:image/jpeg;base64,' + base64;
-                    } else {
-                        let width = video.videoWidth, height = video.videoHeight;
-                        overlay.width = width;
-                        overlay.height = height;
-                        overlayCC.drawImage(video, 0, 0, width, height, 0, 0, width, height);
-                        return overlay.toDataURL('image/jpeg');
-                    }
+            chooseImageBtn.classList.add("btn", "btn-lg", "mod-btn1", "btn-block");
+            chooseImageBtn.innerHTML = "画像を選択";
+
+            chooseImageBtn.addEventListener("click", () => {
+                chooseImageElem.click();
+            });
+
+            chooseImageElem.accept = "image/*";
+            chooseImageElem.type = "file";
+            chooseImageElem.style.display = "none";
+
+            chooseImageElem.addEventListener("change", event => {
+                if (event.target.files.length !== 1 || !event.target.files[0].type.startsWith('image/')) {
+                    return;
                 }
 
-                let imageDataUrl = takeFrame();
+                imageCompression(event.target.files[0], {
+                    maxSizeMB: 1,
+                    useWebWorker: true,
+                }).then(compressedFile => {
+                    const imageReader = new FileReader();
+                    imageReader.addEventListener("load", event => {
+                        localStorage.setItem("imageDataUrl", event.target.result);
 
-                verifyFace(imageDataUrl);
+                        location.reload();
+                    });
+
+                    imageReader.readAsDataURL(compressedFile);
+                });
             });
+
+            document.querySelector("#face-center-webcam>div:last-child>p:first-child").appendChild(chooseImageBtn);
+            document.body.appendChild(chooseImageElem);
         });
     }
 
@@ -118,7 +90,7 @@
 
     EventTarget.prototype.addEventListener = function(type, listener, options) {
         if (type === 'blur') {
-            console.log('blurイベントをブロックしました');
+            console.log('blocked blur event');
             return;
         }
 
@@ -242,20 +214,21 @@
                     return btoa(nStr + '|' + chr);
                 };
 
-                $.post({
-                    'url': "/api/lesson/complete-pmovie",
-                    'type': "POST",
-                    'headers': {
-                        'gftwkiw': processStr(params.get("UserLearningLessonId")),
-                        'htsgrfg': processStr(params.get("UnitId")),
+                fetch("/api/lesson/complete-pmovie", {
+                    method: "POST",
+                    headers: {
+                        "gftwkiw": processStr(params.get("UserLearningLessonId")),
+                        "htsgrfg": processStr(params.get("UnitId")),
+                        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
                     },
-                    'success': function (res) {
-                        if (res.result === "success") window.location.reload();
-                        else alert("レッスン記録を保存できませんでした");
-                    },
-                    'error': function () {
+                }).then(res => {
+                    return res.json()
+                }).then(data => {
+                    if (data.result === "success") {
+                        location.reload();
+                    } else {
                         alert("レッスン記録を保存できませんでした");
-                    },
+                    }
                 });
             });
 
