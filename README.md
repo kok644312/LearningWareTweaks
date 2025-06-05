@@ -2,7 +2,7 @@
 Tweaks for Learning Ware
 
 # Feature
-* Bypass face verification at login
+* Bypass face verification
 * Bypass abuse detection
 * Enable simultaneous lesson
 * Enable playback rate
