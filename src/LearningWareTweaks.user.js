@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.9.0
+// @version      1.9.1
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -80,8 +80,8 @@
                 });
             });
 
-            document.querySelector("#face-center-webcam>div:last-child>p:first-child").appendChild(chooseImageBtn);
-            document.body.appendChild(chooseImageElem);
+            document.querySelector("#face-center-webcam>div:last-child>p:first-child").append(chooseImageBtn);
+            document.body.append(chooseImageElem);
         });
     }
 
@@ -237,8 +237,18 @@
 
             completeBtnElem.append(completeBtnIconElem);
             completeBtnElem.append(document.createElement("br"));
-            completeBtnElem.append(document.createTextNode("レッスンを完了"));
+            completeBtnElem.append(document.createTextNode("完了"));
 
+            const customStyleElem = document.createElement("style");
+            customStyleElem.innerHTML = `
+            @media (max-width: 768px) {
+              .rbox button {
+                width: 15%!important;
+              }
+            }
+            `;
+
+            document.body.append(customStyleElem);
             btnContainerElem.insertBefore(completeBtnElem, endBtnElem);
         });
 
