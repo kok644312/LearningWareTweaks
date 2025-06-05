@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Learning Ware Tweaks
 // @namespace    http://tampermonkey.net/
-// @version      1.9.1
+// @version      1.9.2
 // @description  Tweaks for Learning Ware
 // @author       kok644312
 // @match        https://*.learning-ware.jp/*
@@ -189,67 +189,68 @@
 
         if(window.proseeds == undefined || window.proseeds.lesson == undefined || window.proseeds.lesson.GetLearningStatus == undefined) return;
 
+        let btnContainerElem = document.querySelector(".rbox");
+        let endBtnElem = document.getElementById("end");
+
+        let completeBtnElem = document.createElement("button");
+        let completeBtnIconElem = document.createElement("span");
+
+        completeBtnElem.id = "complete";
+        completeBtnElem.disabled = true;
+
+        completeBtnElem.addEventListener("click", () => {
+            const params = new URL(window.location).searchParams;
+
+            const processStr = (str) => {
+                const strLen = str.length;
+                const chr = String.fromCharCode(...crypto.getRandomValues(new Uint8Array(0x4)));
+                const strb64 = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(strLen)))).substring(0x0, strLen).split('');
+                const nStr = str.split('').map((chr, chrIndex) => strb64[chrIndex] + chr).join('');
+                return btoa(nStr + '|' + chr);
+            };
+
+            fetch("/api/lesson/complete-pmovie", {
+                method: "POST",
+                headers: {
+                    "gftwkiw": processStr(params.get("UserLearningLessonId")),
+                    "htsgrfg": processStr(params.get("UnitId")),
+                    "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
+                },
+            }).then(res => {
+                return res.json()
+            }).then(data => {
+                if (data.result === "success") {
+                    location.reload();
+                } else {
+                    alert("レッスン記録を保存できませんでした");
+                }
+            });
+        });
+
+        completeBtnIconElem.classList.add("glyphicon");
+        completeBtnIconElem.classList.add("glyphicon-check");
+
+        completeBtnElem.append(completeBtnIconElem);
+        completeBtnElem.append(document.createElement("br"));
+        completeBtnElem.append(document.createTextNode("完了"));
+
+        const customStyleElem = document.createElement("style");
+        customStyleElem.innerHTML = `
+        @media (max-width: 768px) {
+          .rbox button {
+            width: 15%!important;
+          }
+        }
+        `;
+
+        document.body.append(customStyleElem);
+        btnContainerElem.insertBefore(completeBtnElem, endBtnElem);
+
         window.proseeds.lesson.GetLearningStatus((_1, isCompleted) => {
-            let btnContainerElem = document.querySelector(".rbox");
-            let endBtnElem = document.getElementById("end");
-
-            let completeBtnElem = document.createElement("button");
-            let completeBtnIconElem = document.createElement("span");
-
-            completeBtnElem.id = "complete";
-            if(isCompleted == 1) {
-                completeBtnElem.disabled = true;
-            } else {
+            if(isCompleted !== 1) {
+                completeBtnElem.disabled = false;
                 completeBtnElem.classList.add("touchable");
             }
-
-            completeBtnElem.addEventListener("click", () => {
-                const params = new URL(window.location).searchParams;
-
-                const processStr = (str) => {
-                    const strLen = str.length;
-                    const chr = String.fromCharCode(...crypto.getRandomValues(new Uint8Array(0x4)));
-                    const strb64 = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(strLen)))).substring(0x0, strLen).split('');
-                    const nStr = str.split('').map((chr, chrIndex) => strb64[chrIndex] + chr).join('');
-                    return btoa(nStr + '|' + chr);
-                };
-
-                fetch("/api/lesson/complete-pmovie", {
-                    method: "POST",
-                    headers: {
-                        "gftwkiw": processStr(params.get("UserLearningLessonId")),
-                        "htsgrfg": processStr(params.get("UnitId")),
-                        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
-                    },
-                }).then(res => {
-                    return res.json()
-                }).then(data => {
-                    if (data.result === "success") {
-                        location.reload();
-                    } else {
-                        alert("レッスン記録を保存できませんでした");
-                    }
-                });
-            });
-
-            completeBtnIconElem.classList.add("glyphicon");
-            completeBtnIconElem.classList.add("glyphicon-check");
-
-            completeBtnElem.append(completeBtnIconElem);
-            completeBtnElem.append(document.createElement("br"));
-            completeBtnElem.append(document.createTextNode("完了"));
-
-            const customStyleElem = document.createElement("style");
-            customStyleElem.innerHTML = `
-            @media (max-width: 768px) {
-              .rbox button {
-                width: 15%!important;
-              }
-            }
-            `;
-
-            document.body.append(customStyleElem);
-            btnContainerElem.insertBefore(completeBtnElem, endBtnElem);
         });
 
         observer.disconnect();
